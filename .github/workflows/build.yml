@@ -1,0 +1,36 @@
+
+on:
+  push:
+    branches: ['**']
+  release:
+    types: [published]
+
+env:
+  CI_RELEASE: ${{ github.event_name == 'release' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      adoptopenjdk/openjdk8:x86_64-alpine-jdk8u322-b06-slim@sha256:44ec16b8115a80b4c85b60de73afb4dcaa39a02c438a0750591ac2d1ac29836e
+
+    steps:
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 17.4.0
+          registry-url: https://registry.npmjs.org
+      - uses: actions/checkout@v2
+
+      - run: |
+          npm ci --no-optional
+          mkdir classes
+          javac -d classes -cp "$(npx node -p 'require("google-closure-compiler-java")')" AcocrCommandLineRunner.java
+
+      - if: env.CI_RELEASE == 'true'
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          [ "$(node -p 'require("./package.json").version')" = "$TAG_NAME" ]
+          [ "$(node -p 'require("./package-lock.json").version')" = "$TAG_NAME" ]
+          npm publish
