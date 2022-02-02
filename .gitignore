@@ -1,0 +1,8 @@
+# IntelliJ
+/.idea
+
+# NPM
+/node_modules
+
+# Java
+/classes
